@@ -485,11 +485,10 @@ Not going to install any more of those, aborting...
     chmod a+x debian/scripts/*
     chmod a+x debian/scripts/misc/*
     sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian.master/config/config.common.ubuntu
-    sed -i "/CONFIG_DVB_LNBP22=m/a CONFIG_DVB_LOOPBACK_ADAPTER=m/" debian.master/config/config.common.ubuntu
+    sed -i "/CONFIG_DVB_LNBP22=m/a CONFIG_DVB_LOOPBACK_ADAPTER=m" debian.master/config/config.common.ubuntu
     fakeroot debian/rules updateconfigs amd64
     UBUNTUKERNEL=$(echo `pwd` | grep -o '[[:digit:]]\+\.[[:digit:]]\+')
-    _ABIDIR=$(ls debian.master/abi/)    
-    _ABINAME=$(ls debian.master/abi/ | grep -o '[[:digit:]]\+' | head -n4 | awk 'NR==4')
+    _ABINAME=$(cat debian/changelog | head -1 | grep -o '[[:digit:]]\+' | head -4 | awk 'NR==4')
     if [ "$abi_opt" = "900" ]; then
       RUNNING=$(uname -r | grep "90[0-9]-generic")
       if [ -d /lib/modules/$UBUNTUKERNEL.0-900-generic ]; then
@@ -531,12 +530,10 @@ Not going to install any more of those, aborting...
         fi
       fi
     fi
-    _NEWABIDIR=$(echo $_ABIDIR | sed "s/$_ABINAME/$abi_opt/")
-    sed -i "s/$UBUNTUKERNEL.0-$_ABINAME/$UBUNTUKERNEL.0-$abi_opt/g" debian/control
-    sed -i "s/$UBUNTUKERNEL.0-$_ABINAME/$UBUNTUKERNEL.0-$abi_opt/g" debian/control.stub
-    sed -i "s/$UBUNTUKERNEL.0-$_ABINAME/$UBUNTUKERNEL.0-$abi_opt/g" debian/changelog
-    sed -i "s/$UBUNTUKERNEL.0-$_ABINAME/$UBUNTUKERNEL.0-$abi_opt/g" debian.master/changelog
-    mv debian.master/abi/$_ABIDIR debian.master/abi/$_NEWABIDIR
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/control
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/control.stub
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/changelog
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.master/changelog
     fakeroot debian/rules clean
   fi
 fi
