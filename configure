@@ -46,36 +46,6 @@ confirmyes(){
     esac
 }
 
-experimental_api(){
-echo -en "
-\E[1;33;44m
-Your kernel or v4l media stack is compiled with
-
-CONFIG_MEDIA_CONTROLLER_DVB=y, or
-CONFIG_MEDIA_CONTROLLER_DVB=m
-
-This is a new and experimental api.
-
-The dvbloopback module will likely
-crash your kernel.
-
-You are heading for DISASTER!!!
-
-Recompile your kernel/v4l media stack with:
-
-# CONFIG_MEDIA_CONTROLLER_DVB is not set
-
-Aborting...
-
-Feel free to patch the dvbloopback module
-so it can coexist with Mauro's new api.
-If you do, please share your patch.
-\E[0m
-
-"
-exit 1
-}
-
 show_help(){
   echo " Usage: ./configure --opt1=<opt> --opt2=<opt>"
   echo "                        "
@@ -102,7 +72,7 @@ show_help(){
   echo "                        "
   echo " --update=<opt>         [yes] no: don't auto-update or clean this repo"
   echo "                        "
-  echo " --abi=<opt>            [900] Debian only kernel version tweak"
+  echo " --abi=<opt>            [900] Debian/Ubuntu only kernel version tweak"
   echo "                        "
 }
 
@@ -301,18 +271,20 @@ Aborting...
 "
     exit 1
   fi
-  if [ "$OS" = "Debian" ]; then
-    apt-get install linux-headers-amd64
-  elif [ "$OS" = "Ubuntu" ]; then
-    apt-get install linux-headers-generic
-  fi
-  if ! [ "$?" -eq "0" ]; then
-    echo "
+  if [ "x$v4l_opt" = "xyes" ]; then
+    if [ "$OS" = "Debian" ]; then
+      apt-get install linux-headers-amd64
+    elif [ "$OS" = "Ubuntu" ]; then
+      apt-get install linux-headers-generic
+    fi
+    if ! [ "$?" -eq "0" ]; then
+      echo "
 Error(s) while installing build dependencies
 
 Aborting...
 "
-    exit 1
+      exit 1
+    fi
   fi
   if ! [ "$RELEASE" = "jessie" -o "$UBUNTURELEASE" = "LTS" ];then
     if [ "x$stock_opt" = "xyes" ]; then
@@ -346,13 +318,8 @@ fi
 
 # Debian
 if [ "x$stock_opt" = "xyes" ]; then
-  if [ "$OS" = "Debian" ]; then
-    apt-get -t jessie source linux -y || die "Error(s) while fetching Debian Linux source"
-    cd linux-*
-  elif [ "$OS" = "Ubuntu" ]; then
-    apt-get source linux -y || die "Error(s) while fetching Ubuntu Linux source"
-    cd linux-*
-  fi
+  apt-get source linux -y || die "Error(s) while fetching Ubuntu Linux source"
+  cd linux-*
 fi
 
 # v4l
@@ -361,7 +328,7 @@ if [ "x$v4l_opt" = "xyes" ];then
   git clone --depth=1 git://linuxtv.org/media_tree.git || die "Error(s) while fetching v4l source tree"
 fi
 
-# Other
+# Vanilla
 if [ "x$vanilla_opt" != "x" ];then
   MAJOR=$(echo "$vanilla_opt" | cut -d'.' -f1)
   VERSION=$( echo "$vanilla_opt" | cut -d'.' -f2 | cut -d'-' -f1 )
@@ -384,7 +351,7 @@ Aborting...
   if ! echo "$vanilla_opt" | grep "rc" > /dev/null 2>&1; then
     wget https://www.kernel.org/pub/linux/kernel/v$MAJOR.x/linux-$vanilla_opt.tar.xz || die "Error(s) while fetching Linux source"
   else
-    wget https://www.kernel.org/pub/linux/kernel/v4.x/testing/linux-$vanilla_opt.tar.xz || die "Error(s) while fetching Linux source"
+    wget https://www.kernel.org/pub/linux/kernel/v$MAJOR.x/testing/linux-$vanilla_opt.tar.xz || die "Error(s) while fetching Linux source"
   fi
   tar -xJf linux-$vanilla_opt.tar.xz
   cd linux-$vanilla_opt
@@ -486,7 +453,7 @@ Not going to install any more of those, aborting...
     chmod a+x debian/scripts/misc/*
     sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian.master/config/config.common.ubuntu
     sed -i "/CONFIG_DVB_LNBP22=m/a CONFIG_DVB_LOOPBACK_ADAPTER=m" debian.master/config/config.common.ubuntu
-    fakeroot debian/rules updateconfigs amd64
+    fakeroot debian/rules updateconfigs
     UBUNTUKERNEL=$(echo `pwd` | grep -o '[[:digit:]]\+\.[[:digit:]]\+')
     _ABINAME=$(cat debian/changelog | head -1 | grep -o '[[:digit:]]\+' | head -4 | awk 'NR==4')
     if [ "$abi_opt" = "900" ]; then
@@ -546,7 +513,7 @@ if [ "x$v4l_opt" = "xyes" ]; then
   sed -i "s/CONFIG_MEDIA_CONTROLLER_DVB=y/# CONFIG_MEDIA_CONTROLLER_DVB is not set/" v4l/.config
 fi
 
-# Other
+# Vanilla
 if [ "x$stock_opt" = "xno" ]; then
   make oldconfig
   ADAPTERS=$( cat .config | grep "CONFIG_DVB_MAX_ADAPTERS" | grep -o '[[:digit:]]\+' )
@@ -610,7 +577,31 @@ Aborting...
   fi
 fi
 
-# Other
+# Vanilla
+if [ "x$v4l_opt" = "xno" ] && [ "x$stock_opt" = "xno" ]; then
+  if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
+    export CONCURRENCY_LEVEL=2
+    make-kpkg --rootcmd fakeroot clean
+    make-kpkg --rootcmd fakeroot --initrd kernel_image kernel_headers
+    if ! [ "$?" -eq "0" ]; then
+      echo "
+Error(s) while compiling the kernel
+Aborting...
+"
+      exit 1
+    fi
+    cd ..
+  else
+    make
+    if ! [ "$?" -eq "0" ]; then
+      echo "
+Error(s) while compiling the kernel
+Aborting...
+"
+      exit 1
+    fi
+  fi
+fi
 
 
 #
@@ -658,5 +649,17 @@ if [ "x$v4l_opt" = "xyes" ]; then
   make install
 fi
 
-# Other
+# Vanilla
+if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
+  dpkg -i *.deb
+else
+  make modules_install
+  make install
+  echo "
+Your new kernel is installed.
 
+You probably need a initramfs or initrd.
+
+Consult your distro's documentation on how to generate one.
+"
+fi
