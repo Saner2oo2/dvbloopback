@@ -191,15 +191,17 @@ Arrow up and enter will get you there.
   elif [ "$GITSTATUS" -eq "2" -o "$GITSTATUS" -eq "3" ]; then
     echo -en "
 \E[1;33;44m
-#####################################
+########################################
 
 Your local clone cannot be synced
 
 with remote repo due to local changes
 
+Please delete your clone and start fresh
+
 Aborting...
 
-######################################
+#########################################
 \E[0m
 
 "
@@ -318,7 +320,7 @@ fi
 
 # Debian
 if [ "x$stock_opt" = "xyes" ]; then
-  apt-get source linux -y || die "Error(s) while fetching Ubuntu Linux source"
+  apt-get source linux -y || die "Error(s) while fetching Debian or Ubuntu Linux source"
   cd linux-*
 fi
 
@@ -331,7 +333,7 @@ fi
 # Vanilla
 if [ "x$vanilla_opt" != "x" ];then
   MAJOR=$(echo "$vanilla_opt" | cut -d'.' -f1)
-  VERSION=$( echo "$vanilla_opt" | cut -d'.' -f2 | cut -d'-' -f1 )
+  VERSION=$(echo "$vanilla_opt" | cut -d'.' -f2 | cut -d'-' -f1)
   if [ "$MAJOR" -lt "3" ]; then
     echo "
 Minimum supported kernel version is linux-3.10.x
@@ -368,7 +370,7 @@ if [ "x$v4l_opt" = "xno" ]; then
   cp -f ../dvbloopback/* drivers/media/pci/dvbloopback/
   patch -p0 < ../dvbloopback.patch
   FIRST_DIGIT=$(echo `pwd` | grep -o '[[:digit:]]\+' | head -n1 | awk 'NR==1')
-  SECOND_DIGIT=$( echo `pwd` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2')
+  SECOND_DIGIT=$(echo `pwd` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2')
   if [ "$FIRST_DIGIT" -lt "4" ] && [ "$SECOND_DIGIT" -lt "13" ]; then
     patch -p0 < ../3.7-dvb-core.patch
   else
