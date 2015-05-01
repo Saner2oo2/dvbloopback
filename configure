@@ -652,16 +652,35 @@ if [ "x$v4l_opt" = "xyes" ]; then
 fi
 
 # Vanilla
-if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
-  dpkg -i *.deb
-else
-  make modules_install
-  make install
-  echo "
+if [ "x$v4l_opt" = "xno" ] && [ "x$stock_opt" = "xno" ]; then
+  if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
+    dpkg -i *.deb
+    if echo $vanilla_opt | grep "rc" > /dev/null 2>&1; then
+      BUILDLINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//' | sed 's/-rc/.0-rc/')build"
+      SOURCELINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//' | sed 's/-rc/.0-rc/')source"
+      HEADERSDIR="/usr/src/$(ls -d1 */ | grep "linux" | sed 's/linux-/linux-headers-/' | sed 's/-r/.0-r/' | sed 's/\///')"
+    elif echo $vanilla_opt | grep -o '[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+' > /dev/null 2>&1; then
+      BUILDLINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//')build"
+      SOURCELINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//')source"
+      HEADERSDIR="/usr/src/$(ls -d1 */ | grep "linux" | sed 's/linux-/linux-headers-/' | sed 's/\///')"
+    else
+      BUILDLINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//' | sed 's/\//.0\//')build"
+      SOURCELINK="/lib/modules/$(ls -d1 */ | grep "linux" | sed 's/linux-//' | sed 's/\//.0\//')source"
+      HEADERSDIR="/usr/src/$(ls -d1 */ | grep "linux" | sed 's/linux-/linux-headers-/' | sed 's/\//.0/')"
+    fi
+    rm -f $BUILDLINK
+    rm -f $SOURCELINK
+    ln -s $HEADERSDIR $SOURCELINK
+    ln -s $HEADERSDIR $BUILDLINK
+  else
+    make modules_install
+    make install
+    echo "
 Your new kernel is installed.
 
 You probably need a initramfs or initrd.
 
 Consult your distro's documentation on how to generate one.
 "
+  fi
 fi
