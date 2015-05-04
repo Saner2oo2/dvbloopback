@@ -10,10 +10,11 @@ die(){
 
 die_unknown(){
     echo -en "
-\E[1;33;44mUnknown option \"$1\".\E[0m
+\E[1;33;44mUnknown option \"$1\".
+
+run ./configure --help for valid options\E[0m
 
 "
-    ./configure --help
     exit 1
 }
 
@@ -246,8 +247,13 @@ Only Ubuntu LTS releases are supported, starting with 14.04 (trusty)
 fi
 
 if ! [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ] ; then
-  stock_opt=no
+  stock_opt="no"
 else
+  if uname -a | grep "x86_64" > /dev/null 2>&1; then
+    CONFIG="amd64"
+  else
+    CONFIG="i386"
+  fi
   if ! dpkg-query -l build-essential | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency build-essential, marking for installation.
@@ -274,10 +280,8 @@ Aborting...
     exit 1
   fi
   if [ "x$v4l_opt" = "xyes" ]; then
-    if [ "$OS" = "Debian" ]; then
-      apt-get install linux-headers-amd64
-    elif [ "$OS" = "Ubuntu" ]; then
-      apt-get install linux-headers-generic
+    if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
+      apt-get install linux-headers-`uname -r`
     fi
     if ! [ "$?" -eq "0" ]; then
       echo "
@@ -320,7 +324,7 @@ fi
 
 # Debian
 if [ "x$stock_opt" = "xyes" ]; then
-  apt-get source linux -y || die "Error(s) while fetching Debian or Ubuntu Linux source"
+  apt-get source linux-image-`uname -r` -y || die "Error(s) while fetching Debian Linux source"
   cd linux-*
 fi
 
@@ -405,23 +409,23 @@ if [ "x$stock_opt" = "xyes" ]; then
       RUNNING=$(uname -r | grep "90[0-9]-amd64")
       if [ -d /lib/modules/$DEBIANKERNEL.0-900-amd64 ]; then
         if ! [ -d /lib/modules/$DEBIANKERNEL.0-901-amd64 ]; then
-          abi_opt=901
+          abi_opt="901"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-902-amd64 ]; then
-          abi_opt=902
+          abi_opt="902"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-903-amd64 ]; then
-          abi_opt=903
+          abi_opt="903"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-904-amd64 ]; then
-          abi_opt=904
+          abi_opt="904"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-905-amd64 ]; then
-          abi_opt=905
+          abi_opt="905"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-906-amd64 ]; then
-          abi_opt=906
+          abi_opt="906"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-907-amd64 ]; then
-          abi_opt=907
+          abi_opt="907"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-908-amd64 ]; then
-          abi_opt=908
+          abi_opt="908"
         elif ! [ -d /lib/modules/$DEBIANKERNEL.0-909-amd64 ]; then
-          abi_opt=909
+          abi_opt="909"
         else
           if [ "$RUNNING" = "" ]; then
             echo "
@@ -448,37 +452,52 @@ Not going to install any more of those, aborting...
     sed -i "s/-$_ABINAME/-$abi_opt/g" debian/rules.gen
     fakeroot debian/rules debian/control-real
     sed -i "s/DEBUG='True'/DEBUG='FALSE'/g" debian/rules.gen
-    fakeroot make -f debian/rules.gen setup_amd64_none_amd64
-    sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian/build/build_amd64_none_amd64/.config
+    if [ "$CONFIG" = "amd64" ]; then
+      fakeroot make -f debian/rules.gen setup_amd64_none_amd64
+      sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian/build/build_amd64_none_amd64/.config
+    else
+      fakeroot make -f debian/rules.gen setup_i386_none_686-pae_real
+      sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian/build/build_i386_none_686-pae/.config
+    fi
+    if [ "x$test_opt" = "xyes" ]; then
+      echo "
+Kernel configured.
+"
+      confirmyes
+      if [ "$?" != "0" ]; then
+        exit 0
+      fi
+    fi
   elif [ "$OS" = "Ubuntu" ]; then
     chmod a+x debian/scripts/*
     chmod a+x debian/scripts/misc/*
-    sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian.master/config/config.common.ubuntu
-    sed -i "/CONFIG_DVB_LNBP22=m/a CONFIG_DVB_LOOPBACK_ADAPTER=m" debian.master/config/config.common.ubuntu
+    sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian.*/config/config.common.ubuntu
+    sed -i "/CONFIG_DVB_LNBP22=m/a CONFIG_DVB_LOOPBACK_ADAPTER=m" debian.*/config/config.common.ubuntu
     fakeroot debian/rules updateconfigs
     UBUNTUKERNEL=$(echo `pwd` | grep -o '[[:digit:]]\+\.[[:digit:]]\+')
     _ABINAME=$(cat debian/changelog | head -1 | grep -o '[[:digit:]]\+' | head -4 | awk 'NR==4')
+    export _ABINAME
     if [ "$abi_opt" = "900" ]; then
       RUNNING=$(uname -r | grep "90[0-9]-generic")
       if [ -d /lib/modules/$UBUNTUKERNEL.0-900-generic ]; then
         if ! [ -d /lib/modules/$UBUNTUKERNEL.0-901-generic ]; then
-          abi_opt=901
+          abi_opt="901"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-902-generic ]; then
-          abi_opt=902
+          abi_opt="902"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-903-generic ]; then
-          abi_opt=903
+          abi_opt="903"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-904-generic ]; then
-          abi_opt=904
+          abi_opt="904"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-905-generic ]; then
-          abi_opt=905
+          abi_opt="905"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-906-generic ]; then
-          abi_opt=906
+          abi_opt="906"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-907-generic ]; then
-          abi_opt=907
+          abi_opt="907"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-908-generic ]; then
-          abi_opt=908
+          abi_opt="908"
         elif ! [ -d /lib/modules/$UBUNTUKERNEL.0-909-generic ]; then
-          abi_opt=909
+          abi_opt="909"
         else
           if [ "$RUNNING" = "" ]; then
             echo "
@@ -502,8 +521,19 @@ Not going to install any more of those, aborting...
     sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/control
     sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/control.stub
     sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian/changelog
-    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.master/changelog
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.*/control
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.*/control.stub
+    sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.*/changelog
     fakeroot debian/rules clean
+    if [ "x$test_opt" = "xyes" ]; then
+      echo "
+Kernel configured.
+"
+      confirmyes
+      if [ "$?" != "0" ]; then
+        exit 0
+      fi
+    fi
   fi
 fi
 
@@ -516,7 +546,7 @@ if [ "x$v4l_opt" = "xyes" ]; then
 fi
 
 # Vanilla
-if [ "x$stock_opt" = "xno" ]; then
+if [ "x$vanilla_opt" != "x" ]; then
   make oldconfig
   ADAPTERS=$( cat .config | grep "CONFIG_DVB_MAX_ADAPTERS" | grep -o '[[:digit:]]\+' )
   if ! [ "$ADAPTERS" = "$adapters_opt" ]; then
@@ -534,8 +564,13 @@ fi
 # Debian
 if [ "x$stock_opt" = "xyes" ]; then
   if [ "$OS" = "Debian" ]; then
-    fakeroot make -f debian/rules.gen binary-arch_amd64_none_real
-    fakeroot make -f debian/rules.gen binary-arch_amd64_none_amd64
+    if [ "$CONFIG" = "amd64" ]; then
+      fakeroot make -f debian/rules.gen binary-arch_amd64_none_real
+      fakeroot make -j2 -f debian/rules.gen binary-arch_amd64_none_amd64
+    else
+      fakeroot make -f debian/rules.gen binary-arch_i386_none_real
+      fakeroot make -j2 -f debian/rules.gen binary-arch_i386_none_686-pae
+    fi
     if ! [ "$?" -eq "0" ]; then
       echo "
 Error(s) while compiling the kernel
@@ -580,7 +615,7 @@ Aborting...
 fi
 
 # Vanilla
-if [ "x$v4l_opt" = "xno" ] && [ "x$stock_opt" = "xno" ]; then
+if [ "x$vanilla_opt" != "x" ]; then
   if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
     export CONCURRENCY_LEVEL=2
     make-kpkg --rootcmd fakeroot clean
@@ -614,12 +649,13 @@ fi
 if [ "x$stock_opt" = "xyes" ]; then
   if [ "$OS" = "Debian" ]; then
     dpkg -i *.deb
-    apt-get -f install
+    apt-get -f install -y
     echo "
+
 Installed:
 
-linux-image-$DEBIANKERNEL.0-$abi_opt-amd64
-linux-headers-$DEBIANKERNEL.0-$abi_opt-amd64
+linux-image-$DEBIANKERNEL.0-$abi_opt-$CONFIG
+linux-headers-$DEBIANKERNEL.0-$abi_opt-$CONFIG
 linux-headers-$DEBIANKERNEL.0-$abi_opt-common
 
 All done, you should reboot NOW!
@@ -627,8 +663,9 @@ All done, you should reboot NOW!
 "
   elif [ "$OS" = "Ubuntu" ]; then
     dpkg -i *.deb
-    apt-get -f install
+    apt-get -f install -y
     echo "
+
 Installed:
 
 linux-image-$UBUNTUKERNEL.0-$abi_opt-generic
@@ -649,10 +686,17 @@ if [ "x$v4l_opt" = "xyes" ]; then
     depmod -a
   fi
   make install
+  echo "
+
+v4l modules installed in /lib/modules/`uname -r`/updates/media
+
+You should reboot NOW!
+
+"
 fi
 
 # Vanilla
-if [ "x$v4l_opt" = "xno" ] && [ "x$stock_opt" = "xno" ]; then
+if [ "x$vanilla_opt" != "x" ]; then
   if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
     dpkg -i *.deb
     if echo $vanilla_opt | grep "rc" > /dev/null 2>&1; then
@@ -672,6 +716,13 @@ if [ "x$v4l_opt" = "xno" ] && [ "x$stock_opt" = "xno" ]; then
     rm -f $SOURCELINK
     ln -s $HEADERSDIR $SOURCELINK
     ln -s $HEADERSDIR $BUILDLINK
+    echo "
+
+Your new linux-$vanilla_opt kernel and headers are installed.
+
+You should reboot NOW!
+
+"
   else
     make modules_install
     make install
