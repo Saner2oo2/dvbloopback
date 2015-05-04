@@ -459,15 +459,6 @@ Not going to install any more of those, aborting...
       fakeroot make -f debian/rules.gen setup_i386_none_686-pae_real
       sed -i "s/CONFIG_DVB_MAX_ADAPTERS=8/CONFIG_DVB_MAX_ADAPTERS=$adapters_opt/" debian/build/build_i386_none_686-pae/.config
     fi
-    if [ "x$test_opt" = "xyes" ]; then
-      echo "
-Kernel configured.
-"
-      confirmyes
-      if [ "$?" != "0" ]; then
-        exit 0
-      fi
-    fi
   elif [ "$OS" = "Ubuntu" ]; then
     chmod a+x debian/scripts/*
     chmod a+x debian/scripts/misc/*
@@ -525,15 +516,6 @@ Not going to install any more of those, aborting...
     sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.*/control.stub
     sed -i "s/0-$_ABINAME/0-$abi_opt/g" debian.*/changelog
     fakeroot debian/rules clean
-    if [ "x$test_opt" = "xyes" ]; then
-      echo "
-Kernel configured.
-"
-      confirmyes
-      if [ "$?" != "0" ]; then
-        exit 0
-      fi
-    fi
   fi
 fi
 
