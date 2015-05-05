@@ -280,20 +280,18 @@ Aborting...
     exit 1
   fi
   if [ "x$v4l_opt" = "xyes" ]; then
-    if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
-      if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
-        if ! [ -d /lib/modules/`uname -r`/build/drivers ]; then
-          apt-get install linux-headers-`uname -r`
-        fi
+    if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
+      if ! [ -d /lib/modules/`uname -r`/build/drivers ]; then
+        apt-get install linux-headers-`uname -r`
       fi
-      if ! [ "$?" -eq "0" ]; then
-        echo "
+    fi
+    if ! [ "$?" -eq "0" ]; then
+      echo "
 Error(s) while installing build dependencies
 
 Aborting...
 "
-        exit 1
-      fi
+      exit 1
     fi
   fi
   if ! [ "$RELEASE" = "jessie" -o "$UBUNTURELEASE" = "LTS" ];then
