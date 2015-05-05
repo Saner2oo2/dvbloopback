@@ -281,7 +281,9 @@ Aborting...
   fi
   if [ "x$v4l_opt" = "xyes" ]; then
     if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
-      apt-get install linux-headers-`uname -r`
+      if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
+        apt-get install linux-headers-`uname -r`
+      fi
     fi
     if ! [ "$?" -eq "0" ]; then
       echo "
