@@ -280,9 +280,7 @@ Only Ubuntu LTS releases are supported, starting with 14.04 (trusty)
   fi
 fi
 
-if ! [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ] ; then
-  stock_opt="no"
-else
+if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ] ; then
   if uname -a | grep "x86_64" > /dev/null 2>&1; then
     CONFIG="amd64"
   else
