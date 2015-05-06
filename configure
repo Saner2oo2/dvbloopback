@@ -223,6 +223,13 @@ Aborting...
   exit 0
 fi
 
+# Get info on what distro etc. we are running
+if [ -f /usr/bin/lsb_release ]; then
+  OS=$( lsb_release -si )
+  RELEASE=$( lsb_release -sc )
+  RELEASENUMBER=$(lsb_release -sr | cut -d'.' -f1)
+fi
+
 # Kernel version check for v4l builds
 if [ "x$v4l_opt" = "xyes" ]; then
   FIRST_DIGIT=$(echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1)
@@ -258,12 +265,6 @@ v4l tree or a vanilla kernel. Aborting....
 fi
 
 # Get build-deps, Debian only.
-if [ -f /usr/bin/lsb_release ]; then
-  OS=$( lsb_release -si )
-  RELEASE=$( lsb_release -sc )
-  RELEASENUMBER=$(lsb_release -sr | cut -d'.' -f1)
-fi
-
 if [ "$OS" = "Ubuntu" ]; then
   if ! lsb_release -d | grep LTS > /dev/null 2>&1; then
     echo "
