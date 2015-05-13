@@ -64,7 +64,7 @@ show_help(){
   echo "                        want to compile. Like --vanilla=3.18.12"
   echo "                        This disables --stock option"
   echo "                        "
-  echo " --v4l=<opt>            [no] yes: compile official current v4l tree"
+  echo " --v4l=<opt>            [no] yes: compile current official v4l tree"
   echo "                        against your running kernel"
   echo "                        tbs: compile Luis Alves' v4l repo"
   echo "                        Disables --stock= and --vanilla="
@@ -232,7 +232,7 @@ if [ -f /usr/bin/lsb_release ]; then
 fi
 
 # Kernel version check for v4l builds
-if [ "x$v4l_opt" = "xyes" ]; then
+if [ "x$v4l_opt" = "xyes" -o "x$v4l_opt" = "xtbs" ]; then
   FIRST_DIGIT=$(echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1)
   SECOND_DIGIT=$(echo `uname -r` | grep -o '[[:digit:]]\+' | awk 'NR==2')
   if [ "$FIRST_DIGIT" -lt "4" ]; then
@@ -313,7 +313,7 @@ Aborting...
 "
     exit 1
   fi
-  if [ "x$v4l_opt" = "xyes" ]; then
+  if [ "x$v4l_opt" = "xyes" -o "x$v4l_opt" = "xtbs" ]; then
     if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
       if ! [ -d /lib/modules/`uname -r`/build/drivers ]; then
         apt-get install linux-headers-`uname -r`
