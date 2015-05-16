@@ -360,7 +360,11 @@ fi
 
 # Debian
 if [ "x$stock_opt" = "xyes" ]; then
-  apt-get source linux-image-`uname -r` -y || die "Error(s) while fetching Debian Linux source"
+  if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+    apt-get source linux-image-`uname -r` -y || die "Error(s) while fetching Debian Linux source"
+  else
+    apt-get source linux -y || die "Error(s) while fetching Debian Linux source"
+  fi
   cd linux-*
 fi
 
